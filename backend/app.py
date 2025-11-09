@@ -15,10 +15,9 @@ CORS(app)  # React와 통신을 위한 CORS 설정
 db = Database('crypto_dashboard.db')
 collector = BinanceCollector()
 
+
 # 모니터링할 코인 리스트
 COIN_SYMBOLS = collector.get_all_symbols()
-
-
 @app.route('/api/health')
 def health_check():
     """API 서버 상태 확인"""
@@ -45,6 +44,7 @@ def get_current_prices():
     현재 코인 시세를 반환하는 API
     Returns:
         JSON: 코인 시세 리스트
+        /api/current-prices?page=1&limit=50
     """
     try:
         page = int(request.args.get('page', 1))
