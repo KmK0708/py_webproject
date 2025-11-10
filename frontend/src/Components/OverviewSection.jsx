@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const OverviewSection = ({ overviewCoins }) => {
+const OverviewSection = ({ overviewCoins, onCoinClick }) => {
   const [search, setSearch] = useState('');
   const [sortOrder, setSortOrder] = useState(null);
 
@@ -47,11 +47,18 @@ const OverviewSection = ({ overviewCoins }) => {
 
       <div className="market-overview">
         {sorted.map(coin => (
-          <div key={coin.symbol} className="overview-card">
+          <div
+            key={coin.symbol}
+            className="overview-card clickable"
+            onClick={() => onCoinClick(coin.symbol)}
+          >
             <div className="overview-title">{coin.symbol.replace('USDT', '')}</div>
             <div className="overview-value">${formatNumber(coin.current_price)}</div>
             <div className={`overview-change ${coin.price_change_percent >= 0 ? 'positive' : 'negative'}`}>
               {coin.price_change_percent.toFixed(2)}%
+            </div>
+            <div className="chart-icon">
+              <i className="fas fa-chart-line"></i>
             </div>
           </div>
         ))}

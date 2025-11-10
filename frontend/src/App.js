@@ -8,6 +8,7 @@ import OverviewSection from './Components/OverviewSection';
 import LivePriceSection from './Components/LivePriceSection';
 import FearGreedChart from './Components/FearGreedChart';
 import FearGreedGauge from './Components/FearGreedGauge';
+import CoinChartModal from './Components/CoinChartModal';
 
 function App() {
   // -----------------------------
@@ -22,6 +23,7 @@ function App() {
   const [page, setPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [limit] = useState(20);
+  const [selectedCoin, setSelectedCoin] = useState(null);
 
   // -----------------------------
   // 데이터 로드 함수
@@ -121,8 +123,33 @@ function App() {
         </div>
       </div>
 
+      {/* 컨트롤 버튼 */}
+      <div className="container" style={{ marginTop: '30px' }}>
+        <div className="controls">
+          <div className="btn-group">
+            <button className="btn" onClick={() => loadPrices(page)}>
+              <i className="fas fa-sync-alt"></i> Refresh
+            </button>
+            <button 
+              className={`btn ${autoRefresh ? 'btn-success' : 'btn-secondary'}`}
+              onClick={() => setAutoRefresh(!autoRefresh)}
+            >
+              <i className="fas fa-clock"></i> Auto Refresh: {autoRefresh ? 'ON' : 'OFF'}
+            </button>
+          </div>
+          <div className="last-update">
+            <i className="fas fa-clock"></i>
+            <span>Last updated: {lastUpdate || '-'}</span>
+          </div>
+        </div>
+      </div>
+      
+
       {/* 블록형 코인 카드 (OverviewSection) */}
-      <OverviewSection overviewCoins={overviewCoins} />
+      <OverviewSection
+        overviewCoins={overviewCoins}
+        onCoinClick={setSelectedCoin}
+      />
 
       {/* 실시간 테이블 (LivePriceSection) */}
       <LivePriceSection
@@ -133,6 +160,15 @@ function App() {
         limit={limit}
         lastUpdate={lastUpdate}
       />
+
+      {/* 차트 모달 */}
+      {selectedCoin && (
+        <CoinChartModal
+          symbol={selectedCoin}
+          onClose={() => setSelectedCoin(null)}
+          autoRefresh={autoRefresh}
+        />
+      )}
     </div>
   );
 }

@@ -84,6 +84,49 @@ class BinanceCollector:
             return None
 
     # ----------------------------
+    # ✅ 캔들스틱 데이터 가져오기 (차트용)
+    # ----------------------------
+    def get_klines(self, symbol="BTCUSDT", interval="1h", limit=24):
+        """
+        캔들스틱 데이터를 가져옴 (차트 그리기용).
+
+        Args:
+            symbol (str): 코인 심볼 (예: "BTCUSDT")
+            interval (str): 시간 간격 (1m, 5m, 15m, 1h, 4h, 1d 등)
+            limit (int): 가져올 캔들 개수 (기본 24개 = 24시간)
+
+        Returns:
+            list: 캔들스틱 데이터 리스트
+        """
+        try:
+            url = f"{self.base_url}/klines"
+            params = {
+                "symbol": symbol,
+                "interval": interval,
+                "limit": limit
+            }
+            res = requests.get(url, params=params, timeout=10)
+            res.raise_for_status()
+            data = res.json()
+
+            # 캔들스틱 데이터 포맷팅
+            klines = []
+            for k in data:
+                klines.append({
+                    "time": k[0],  # 타임스탬프
+                    "open": float(k[1]), # 시가
+                    "high": float(k[2]), # 고가
+                    "low": float(k[3]), # 저가
+                    "close": float(k[4]), # 종가
+                    "volume": float(k[5]) # 거래량
+                })
+
+            return klines
+        except requests.exceptions.RequestException as e:
+            print(f"캔들스틱 API 요청 오류: {e}")
+            return []
+
+    # ----------------------------
     # ✅ 여러 코인 일괄 조회 (빠름)
     # ----------------------------
     def get_multiple_tickers(self, symbols=None):

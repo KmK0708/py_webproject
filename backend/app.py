@@ -5,7 +5,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from collectors.binance_api import BinanceCollector
 from database.models import Database
-from datetime import datetime
+from datetime import datetime, timedelta
 import requests
 
 app = Flask(__name__)
@@ -15,6 +15,10 @@ CORS(app)  # React와 통신을 위한 CORS 설정
 db = Database('crypto_dashboard.db')
 collector = BinanceCollector()
 
+# 캔들스틱 데이터 캐시 (메모리)
+# 구조: {f"{symbol}_{interval}": {"data": [...], "timestamp": datetime}}
+klines_cache = {}
+CACHE_DURATION = timedelta(minutes=1)  # 1분 동안 캐시 유지
 
 # 모니터링할 코인 리스트
 COIN_SYMBOLS = collector.get_all_symbols()
@@ -154,6 +158,96 @@ def get_stats():
             'success': False,
             'error': str(e)
         }), 500
+
+
+@app.route('/api/klines/<symbol>')
+def get_klines(symbol):
+    """
+    특정 코인의 캔들스틱 데이터를 반환하는 API (차트용)
+    캐싱을 통해 Binance API 요청 횟수를 최소화
+
+    Args:
+        symbol (str): 코인 심볼 (예: BTCUSDT)
+
+    Query params:
+        interval (str): 시간 간격 (1m, 5m, 15m, 1h, 4h, 1d) - 기본값: 1h
+        limit (int): 캔들 개수 - 기본값: 24
+
+    Returns:
+        JSON: 캔들스틱 데이터
+    """
+    try:
+        interval = request.args.get('interval', '1h')
+        limit = int(request.args.get('limit', 24))
+
+        # 심볼이 USDT로 끝나지 않으면 자동으로 추가
+        if not symbol.upper().endswith('USDT'):
+            symbol = f"{symbol.upper()}USDT"
+        else:
+            symbol = symbol.upper()
+
+        # 캐시 키 생성
+        cache_key = f"{symbol}_{interval}_{limit}"
+        current_time = datetime.now()
+
+        # 캐시 확인
+        if cache_key in klines_cache:
+            cached_item = klines_cache[cache_key]
+            cache_age = current_time - cached_item['timestamp']
+
+            # 캐시가 유효한 경우
+            if cache_age < CACHE_DURATION:
+                print(f"✅ 캐시 사용: {cache_key} (나이: {cache_age.seconds}초)")
+                return jsonify({
+                    'success': True,
+                    'symbol': symbol,
+                    'interval': interval,
+                    'data': cached_item['data'],
+                    'cached': True,
+                    'cache_age_seconds': cache_age.seconds
+                })
+
+        # 캐시 미스 또는 만료 - Binance API 호출
+        print(f"🔄 Binance API 호출: {cache_key}")
+        klines = collector.get_klines(symbol, interval, limit)
+
+        # 캐시에 저장
+        klines_cache[cache_key] = {
+            'data': klines,
+            'timestamp': current_time
+        }
+
+        # 오래된 캐시 정리 (메모리 절약)
+        _cleanup_old_cache()
+
+        return jsonify({
+            'success': True,
+            'symbol': symbol,
+            'interval': interval,
+            'data': klines,
+            'cached': False
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+def _cleanup_old_cache():
+    """오래된 캐시 항목 삭제 (메모리 관리)"""
+    current_time = datetime.now()
+    keys_to_delete = []
+
+    for key, value in klines_cache.items():
+        if current_time - value['timestamp'] > CACHE_DURATION * 2:
+            keys_to_delete.append(key)
+
+    for key in keys_to_delete:
+        del klines_cache[key]
+
+    if keys_to_delete:
+        print(f"🗑️ 오래된 캐시 {len(keys_to_delete)}개 삭제")
 
 
 if __name__ == '__main__':
