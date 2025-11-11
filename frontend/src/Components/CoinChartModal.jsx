@@ -11,7 +11,7 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
   const seriesRef = useRef(null);        // 🔸 새로 추가 (캔들 시리즈 참조)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [interval, setInterval] = useState('1h');
+  const [timeframe, setTimeframe] = useState('1h');
   const [coinData, setCoinData] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const abortControllerRef = useRef(null);
@@ -78,7 +78,7 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
       abortControllerRef.current = new AbortController();
 
       try {
-        const cacheKey = `${symbol}_${interval}`;
+        const cacheKey = `${symbol}_${timeframe}`;
         const now = Date.now();
 
         // 클라이언트 캐시 확인
@@ -93,7 +93,7 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
 
         // 서버에서 캔들 데이터 요청
         const res = await fetch(
-          `http://localhost:5000/api/klines/${symbol}?interval=${interval}&limit=24`,
+          `http://localhost:5000/api/klines/${symbol}?interval=${timeframe}&limit=48`,
           { signal: abortControllerRef.current.signal }
         );
         const data = await res.json();
@@ -134,19 +134,19 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
         seriesRef.current = null;
       }
     };
-  }, [symbol, interval, refreshTrigger]);
+  }, [symbol, timeframe, refreshTrigger]);
 
   // 자동 업데이트
   useEffect(() => {
     if (!autoRefresh || !symbol) return;
-    const intervalId = setInterval(() => {
+    const intervalId = window.setInterval(() => {
       console.log('🔄 차트 자동 업데이트:', symbol);
-      const cacheKey = `${symbol}_${interval}`;
+      const cacheKey = `${symbol}_${timeframe}`;
       delete chartDataCache[cacheKey];
       setRefreshTrigger(prev => prev + 1);
     }, 10000);
-    return () => clearInterval(intervalId);
-  }, [autoRefresh, symbol, interval]);
+    return () => window.clearInterval(intervalId);
+  }, [autoRefresh, symbol, timeframe]);
 
   // ESC로 닫기
   useEffect(() => {
@@ -170,7 +170,7 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
               <div className="modal-price-info">
                 <span className="current-price">
                   ${coinData.current_price.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
+                    minimumFractionDigits: 4,
                     maximumFractionDigits: 6,
                   })}
                 </span>
@@ -190,8 +190,8 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
           {['15m', '1h', '4h', '1d'].map((int) => (
             <button
               key={int}
-              className={`interval-btn ${interval === int ? 'active' : ''}`}
-              onClick={() => setInterval(int)}
+              className={`interval-btn ${timeframe === int ? 'active' : ''}`}
+              onClick={() => setTimeframe(int)}
             >
               {int}
             </button>
