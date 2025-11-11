@@ -107,11 +107,29 @@
   color: #f1f5f9;
 }
 
+/* 차트 컨트롤 영역 */
+.chart-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
 /* 간격 선택 버튼 */
 .interval-selector {
   display: flex;
   gap: 8px;
-  margin-bottom: 20px;
+  align-items: center;
+}
+
+.interval-selector label,
+.ma-selector label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-right: 8px;
 }
 
 .interval-btn {
@@ -136,6 +154,71 @@
   background: #3b82f6;
   border-color: #3b82f6;
   color: white;
+}
+
+/* 이동평균선 선택 버튼 */
+.ma-selector {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ma-btn {
+  padding: 6px 12px;
+  border: 1px solid #2b2b43;
+  background: #0f0f23;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.ma-btn:hover {
+  background: #1e1e2f;
+  border-color: currentColor;
+}
+
+.ma-btn.active {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: currentColor;
+}
+
+/* 차트 정보 */
+.chart-info {
+  display: flex;
+  gap: 24px;
+  padding: 12px 16px;
+  background: #0f0f23;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.info-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.info-label {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.info-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.info-value.positive {
+  color: #10b981;
+}
+
+.info-value.negative {
+  color: #ef4444;
 }
 
 /* 차트 컨테이너 */

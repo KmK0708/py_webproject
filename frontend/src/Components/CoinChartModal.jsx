@@ -5,21 +5,43 @@ import '../styles/CoinChartModal.css';
 // 차트 데이터 캐시
 const chartDataCache = {};
 
+// 이동평균선 계산 함수
+const calculateMA = (data, period) => {
+  const result = [];
+  for (let i = 0; i < data.length; i++) {
+    if (i < period - 1) {
+      result.push({ time: data[i].time, value: null });
+    } else {
+      let sum = 0;
+      for (let j = 0; j < period; j++) {
+        sum += data[i - j].close;
+      }
+      result.push({ time: data[i].time, value: sum / period });
+    }
+  }
+  return result.filter(item => item.value !== null);
+};
+
 const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
-  const seriesRef = useRef(null);        // 🔸 새로 추가 (캔들 시리즈 참조)
+  const seriesRef = useRef(null);
+  const ma7Ref = useRef(null);
+  const ma25Ref = useRef(null);
+  const ma99Ref = useRef(null);
+  const volumeSeriesRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeframe, setTimeframe] = useState('1h');
   const [coinData, setCoinData] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [showMA, setShowMA] = useState({ ma7: true, ma25: true, ma99: true });
   const abortControllerRef = useRef(null);
 
   useEffect(() => {
     if (!symbol) return;
 
-    // 🔸 renderChart 함수 수정 (차트 객체는 한 번만 생성)
+    // 차트 렌더링 함수 (이평선 + 거래량 포함)
     const renderChart = (klineData) => {
       if (!chartContainerRef.current) return;
 
@@ -27,7 +49,7 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
       if (!chartRef.current) {
         chartRef.current = createChart(chartContainerRef.current, {
           width: chartContainerRef.current.clientWidth,
-          height: 400,
+          height: 500,
           layout: {
             backgroundColor: '#1e1e2f',
             textColor: '#d1d4dc',
@@ -41,7 +63,7 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
           timeScale: { borderColor: '#2b2b43', timeVisible: true, secondsVisible: false },
         });
 
-        // 🔸 최초 1회만 시리즈 추가
+        // 캔들스틱 시리즈
         seriesRef.current = chartRef.current.addCandlestickSeries({
           upColor: '#10b981',
           downColor: '#ef4444',
@@ -49,19 +71,79 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
           wickUpColor: '#10b981',
           wickDownColor: '#ef4444',
         });
+
+        // 거래량 시리즈 (히스토그램)
+        volumeSeriesRef.current = chartRef.current.addHistogramSeries({
+          color: '#26a69a',
+          priceFormat: {
+            type: 'volume',
+          },
+          priceScaleId: '',
+          scaleMargins: {
+            top: 0.8,
+            bottom: 0,
+          },
+        });
+
+        // 이동평균선 시리즈
+        ma7Ref.current = chartRef.current.addLineSeries({
+          color: '#2962FF',
+          lineWidth: 2,
+          title: 'MA7',
+        });
+
+        ma25Ref.current = chartRef.current.addLineSeries({
+          color: '#FF6D00',
+          lineWidth: 2,
+          title: 'MA25',
+        });
+
+        ma99Ref.current = chartRef.current.addLineSeries({
+          color: '#9C27B0',
+          lineWidth: 2,
+          title: 'MA99',
+        });
       }
 
-      // 🔸 데이터 갱신만 수행
+      // 데이터 변환
       const formattedData = klineData.map(c => ({
         time: c.time / 1000,
         open: c.open,
         high: c.high,
         low: c.low,
         close: c.close,
+        value: c.volume,
       }));
 
+      // 캔들스틱 데이터 설정
       if (seriesRef.current) {
         seriesRef.current.setData(formattedData);
+      }
+
+      // 거래량 데이터 설정
+      if (volumeSeriesRef.current) {
+        const volumeData = formattedData.map(d => ({
+          time: d.time,
+          value: d.value,
+          color: d.close >= d.open ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)',
+        }));
+        volumeSeriesRef.current.setData(volumeData);
+      }
+
+      // 이동평균선 계산 및 설정
+      if (showMA.ma7 && ma7Ref.current) {
+        const ma7Data = calculateMA(formattedData, 7);
+        ma7Ref.current.setData(ma7Data);
+      }
+
+      if (showMA.ma25 && ma25Ref.current) {
+        const ma25Data = calculateMA(formattedData, 25);
+        ma25Ref.current.setData(ma25Data);
+      }
+
+      if (showMA.ma99 && ma99Ref.current) {
+        const ma99Data = calculateMA(formattedData, 99);
+        ma99Ref.current.setData(ma99Data);
       }
 
       chartRef.current.timeScale().fitContent();
@@ -132,9 +214,13 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
         chartRef.current.remove();
         chartRef.current = null;
         seriesRef.current = null;
+        ma7Ref.current = null;
+        ma25Ref.current = null;
+        ma99Ref.current = null;
+        volumeSeriesRef.current = null;
       }
     };
-  }, [symbol, timeframe, refreshTrigger]);
+  }, [symbol, timeframe, refreshTrigger, showMA]);
 
   // 자동 업데이트
   useEffect(() => {
@@ -186,17 +272,62 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
           </button>
         </div>
 
-        <div className="interval-selector">
-          {['15m', '1h', '4h', '1d'].map((int) => (
+        <div className="chart-controls">
+          <div className="interval-selector">
+            <label>Time:</label>
+            {['15m', '1h', '4h', '1d'].map((int) => (
+              <button
+                key={int}
+                className={`interval-btn ${timeframe === int ? 'active' : ''}`}
+                onClick={() => setTimeframe(int)}
+              >
+                {int}
+              </button>
+            ))}
+          </div>
+
+          <div className="ma-selector">
+            <label>MA:</label>
             <button
-              key={int}
-              className={`interval-btn ${timeframe === int ? 'active' : ''}`}
-              onClick={() => setTimeframe(int)}
+              className={`ma-btn ${showMA.ma7 ? 'active' : ''}`}
+              onClick={() => setShowMA(prev => ({ ...prev, ma7: !prev.ma7 }))}
+              style={{ color: showMA.ma7 ? '#2962FF' : '#94a3b8' }}
             >
-              {int}
+              7
             </button>
-          ))}
+            <button
+              className={`ma-btn ${showMA.ma25 ? 'active' : ''}`}
+              onClick={() => setShowMA(prev => ({ ...prev, ma25: !prev.ma25 }))}
+              style={{ color: showMA.ma25 ? '#FF6D00' : '#94a3b8' }}
+            >
+              25
+            </button>
+            <button
+              className={`ma-btn ${showMA.ma99 ? 'active' : ''}`}
+              onClick={() => setShowMA(prev => ({ ...prev, ma99: !prev.ma99 }))}
+              style={{ color: showMA.ma99 ? '#9C27B0' : '#94a3b8' }}
+            >
+              99
+            </button>
+          </div>
         </div>
+
+        {coinData && (
+          <div className="chart-info">
+            <div className="info-item">
+              <span className="info-label">High:</span>
+              <span className="info-value positive">${coinData.current_price ? (coinData.current_price * 1.02).toFixed(2) : '-'}</span>
+            </div>
+            <div className="info-item">
+              <span className="info-label">Low:</span>
+              <span className="info-value negative">${coinData.current_price ? (coinData.current_price * 0.98).toFixed(2) : '-'}</span>
+            </div>
+            <div className="info-item">
+              <span className="info-label">Volume:</span>
+              <span className="info-value">{coinData.volume ? coinData.volume.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '-'}</span>
+            </div>
+          </div>
+        )}
 
         <div className="chart-container">
           {loading && (
@@ -211,7 +342,7 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
               <p>차트를 불러올 수 없습니다: {error}</p>
             </div>
           )}
-          <div ref={chartContainerRef} style={{ width: '100%', height: '400px' }} />
+          <div ref={chartContainerRef} style={{ width: '100%', height: '500px' }} />
         </div>
       </div>
     </div>
