@@ -60,7 +60,7 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
           },
           crosshair: { mode: 1 },
           rightPriceScale: { borderColor: '#2b2b43' },
-          timeScale: { borderColor: '#2b2b43', timeVisible: true, secondsVisible: false },
+          timeScale: { borderColor: '#2b2b43', timeVisible: true, secondsVisible: false, timezone: 'Asia/Seoul'},
         });
 
         // 캔들스틱 시리즈
@@ -78,10 +78,10 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
           priceFormat: {
             type: 'volume',
           },
-          priceScaleId: '',
+          priceScaleId: 'volume',
           scaleMargins: {
             top: 0.8,
-            bottom: 0,
+            bottom: 0.01,
           },
         });
 
@@ -105,9 +105,9 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
         });
       }
 
-      // 데이터 변환
+      // 데이터 변환 (UTC를 한국 시간으로 변환: UTC+9)
       const formattedData = klineData.map(c => ({
-        time: c.time / 1000,
+        time: Math.floor(c.time / 1000) + (9 * 60 * 60), // UTC+9 (한국 시간)
         open: c.open,
         high: c.high,
         low: c.low,

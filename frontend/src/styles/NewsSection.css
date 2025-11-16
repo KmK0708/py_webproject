@@ -1,0 +1,238 @@
+/* 뉴스 섹션 스타일 */
+.news-section {
+  background: var(--secondary-color);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  margin-bottom: 24px;
+}
+
+.news-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.news-title-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.news-title-area h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 24px;
+}
+
+.news-count {
+  background: var(--primary-color);
+  color: var(--text-secondary);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.news-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.news-filter {
+  background: var(--primary-color);
+  color: var(--text-primary);
+  border: 1px solid #2b2b43;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.news-filter:hover {
+  border-color: var(--accent-color);
+}
+
+.news-filter:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.news-btn {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.news-btn:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-2px);
+}
+
+.news-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.news-btn.scrape-btn {
+  background: var(--success-color);
+}
+
+.news-btn.scrape-btn:hover:not(:disabled) {
+  background: #059669;
+}
+
+/* 로딩 */
+.news-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+
+.news-loading .spinner {
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top: 4px solid var(--accent-color);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 에러 */
+.news-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--danger-color);
+  border-radius: 8px;
+  color: var(--danger-color);
+}
+
+.news-error i {
+  font-size: 20px;
+}
+
+/* 빈 상태 */
+.news-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+
+.news-empty i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+/* 뉴스 리스트 */
+.news-list {
+  display: grid;
+  gap: 16px;
+}
+
+.news-card {
+  background: var(--primary-color);
+  border: 1px solid #2b2b43;
+  border-radius: 10px;
+  padding: 16px;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.news-card:hover {
+  border-color: var(--accent-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.news-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.news-source {
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.news-time {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.news-title {
+  display: block;
+  color: var(--text-primary);
+  font-size: 16px;
+  line-height: 1.5;
+  text-decoration: none;
+  margin-bottom: 12px;
+  transition: color 0.3s;
+}
+
+.news-title:hover {
+  color: var(--accent-color);
+}
+
+.news-coins {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.coin-badge {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--accent-color);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .news-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .news-controls {
+    width: 100%;
+  }
+
+  .news-filter,
+  .news-btn {
+    flex: 1;
+  }
+}

@@ -9,6 +9,7 @@ import LivePriceSection from './Components/LivePriceSection';
 import FearGreedChart from './Components/FearGreedChart';
 import FearGreedGauge from './Components/FearGreedGauge';
 import CoinChartModal from './Components/CoinChartModal';
+import NewsSection from './Components/NewsSection';
 
 function App() {
   // -----------------------------
@@ -160,6 +161,11 @@ function App() {
         limit={limit}
         lastUpdate={lastUpdate}
       />
+
+      {/* 뉴스 섹션 */}
+      <div className="container" style={{ marginTop: '30px' }}>
+        <NewsSection />
+      </div>
 
       {/* 차트 모달 */}
       {selectedCoin && (

@@ -35,9 +35,10 @@ class News(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String(500), nullable=False)
-    url = Column(String(1000))
-    source = Column(String(100))
-    published_at = Column(DateTime)
+    url = Column(String(1000), unique=True, index=True)  # 중복 방지를 위한 unique 인덱스
+    source = Column(String(100), index=True)
+    published_at = Column(DateTime, index=True)
+    related_coins = Column(String(200))  # 관련 코인 심볼 (쉼표로 구분)
     timestamp = Column(DateTime, default=datetime.now, index=True)
 
     def __repr__(self):
@@ -113,16 +114,26 @@ class Database:
     def add_news(self, news_data):
         """
         뉴스 데이터를 데이터베이스에 추가합니다.
+        중복된 URL은 건너뜁니다.
 
         Args:
             news_data (dict): 뉴스 정보 딕셔너리
+
+        Returns:
+            bool: 성공 여부
         """
         try:
+            # 중복 체크
+            existing = self.session.query(News).filter(News.url == news_data.get('url')).first()
+            if existing:
+                return False  # 이미 존재하는 뉴스
+
             news_record = News(
                 title=news_data['title'],
                 url=news_data.get('url'),
                 source=news_data.get('source'),
-                published_at=news_data.get('published_at')
+                published_at=news_data.get('published_at'),
+                related_coins=news_data.get('related_coins')
             )
             self.session.add(news_record)
             self.session.commit()
@@ -132,18 +143,40 @@ class Database:
             self.session.rollback()
             return False
 
-    def get_recent_news(self, limit=20):
+    def get_recent_news(self, limit=20, source=None):
         """
         최근 뉴스를 조회합니다.
 
         Args:
+            limit (int): 조회할 뉴스 개수
+            source (str): 특정 소스만 조회 (선택)
+
+        Returns:
+            list: News 객체 리스트
+        """
+        query = self.session.query(News)
+
+        if source:
+            query = query.filter(News.source == source)
+
+        return query.order_by(News.published_at.desc())\
+            .limit(limit)\
+            .all()
+
+    def get_news_by_coin(self, coin_symbol, limit=20):
+        """
+        특정 코인과 관련된 뉴스를 조회합니다.
+
+        Args:
+            coin_symbol (str): 코인 심볼 (예: BTC, ETH)
             limit (int): 조회할 뉴스 개수
 
         Returns:
             list: News 객체 리스트
         """
         return self.session.query(News)\
-            .order_by(News.timestamp.desc())\
+            .filter(News.related_coins.like(f'%{coin_symbol}%'))\
+            .order_by(News.published_at.desc())\
             .limit(limit)\
             .all()
 
