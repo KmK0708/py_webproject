@@ -52,15 +52,24 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
           height: 500,
           layout: {
             backgroundColor: '#1e1e2f',
-            textColor: '#d1d4dc',
+            textColor: '#1c1e24ff',
+            attributionLogo: false,
           },
           grid: {
             vertLines: { color: '#2b2b43' },
             horzLines: { color: '#2b2b43' },
           },
           crosshair: { mode: 1 },
-          rightPriceScale: { borderColor: '#2b2b43' },
+          //메인 가격 축(캔들용) 세팅: 아래쪽 30% 비워두기.
+          rightPriceScale: {
+            borderColor: '#2b2b43',
+            scaleMargins: {
+              top: 0.1,    // 위쪽 10% 여백
+              bottom: 0.3, // 아래쪽 30%는 거래량을 위해 비워둠
+            },
+          },
           timeScale: { borderColor: '#2b2b43', timeVisible: true, secondsVisible: false, timezone: 'Asia/Seoul'},
+
         });
 
         // 캔들스틱 시리즈
@@ -70,6 +79,11 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
           borderVisible: false,
           wickUpColor: '#10b981',
           wickDownColor: '#ef4444',
+          priceFormat: {
+            type: 'price',
+            precision: 4, //  표시할 소수점 자릿수
+            minMove: 0.0001, //  6자리에 맞게 최소 움직임 설정
+          },
         });
 
         // 거래량 시리즈 (히스토그램)
@@ -78,10 +92,14 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
           priceFormat: {
             type: 'volume',
           },
-          priceScaleId: 'volume',
+          priceScaleId: '',
+        });
+
+        // 거래량 시리즈의 축 세팅: 위쪽 75%를 비워둡니다.
+        volumeSeriesRef.current.priceScale().applyOptions({
           scaleMargins: {
-            top: 0.8,
-            bottom: 0.01,
+            top: 0.75, // 위쪽 75%는 캔들을 위해 비워둠
+            bottom: 0,
           },
         });
 
@@ -175,7 +193,7 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
 
         // 서버에서 캔들 데이터 요청
         const res = await fetch(
-          `http://localhost:5000/api/klines/${symbol}?interval=${timeframe}&limit=48`,
+          `http://localhost:5000/api/klines/${symbol}?interval=${timeframe}&limit=120`,
           { signal: abortControllerRef.current.signal }
         );
         const data = await res.json();

@@ -55,7 +55,7 @@ const OverviewSection = ({ overviewCoins, onCoinClick }) => {
             <div className="overview-title">{coin.symbol.replace('USDT', '')}</div>
             <div className="overview-value">${formatNumber(coin.current_price)}</div>
             <div className={`overview-change ${coin.price_change_percent >= 0 ? 'positive' : 'negative'}`}>
-              {coin.price_change_percent.toFixed(2)}%
+              {coin.price_change_percent.toFixed(4)}%
             </div>
             <div className="chart-icon">
               <i className="fas fa-chart-line"></i>

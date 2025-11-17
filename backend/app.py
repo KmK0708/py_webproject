@@ -369,6 +369,12 @@ def scrape_news():
             related_coins = news_scraper.extract_coin_mentions(news['title'])
             news['related_coins'] = ','.join(related_coins) if related_coins else None
 
+            # 🔥 published_at이 None이면 현재시간으로 채움
+            published_at = news.get('published_at')
+            if not published_at:
+                published_at = datetime.now()
+            news['published_at'] = published_at
+
             if db.add_news(news):
                 saved_count += 1
             else:

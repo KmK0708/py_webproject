@@ -83,6 +83,8 @@ const NewsSection = () => {
       case 'CoinDesk': return '#f7931a';
       case 'CryptoNews': return '#26a69a';
       case 'CoinTelegraph': return '#3b82f6';
+      case 'Coinness': return '#10b981';       
+      case 'TokenPost': return '#ec4899';      
       default: return '#94a3b8';
     }
   };
@@ -106,6 +108,8 @@ const NewsSection = () => {
             <option value="CoinDesk">CoinDesk</option>
             <option value="CryptoNews">CryptoNews</option>
             <option value="CoinTelegraph">CoinTelegraph</option>
+            <option value="Coinness">Coinness (한국)</option>
+            <option value="TokenPost">TokenPost (한국)</option>
           </select>
 
           {/* 개수 선택 */}

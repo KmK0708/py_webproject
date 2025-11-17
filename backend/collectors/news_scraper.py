@@ -9,7 +9,9 @@ from datetime import datetime, timedelta
 import time
 import re
 import feedparser
+import pytz
 
+KST = pytz.timezone("Asia/Seoul")
 
 class NewsScraper:
     """암호화폐 뉴스 크롤러"""
@@ -20,6 +22,17 @@ class NewsScraper:
         }
         self.session = requests.Session()
         self.session.headers.update(self.headers)
+        
+    
+    
+    def to_kst(self, dt):
+        if dt is None:
+            return datetime.now(KST)
+        if dt.tzinfo is None:
+            # naive → UTC 가정 → 한국 시간으로 변환
+            return pytz.utc.localize(dt).astimezone(KST)
+        else:
+            return dt.astimezone(KST)
 
     def scrape_coindesk(self, limit=10):
         """
@@ -49,6 +62,8 @@ class NewsScraper:
                         published_at = datetime(*entry.published_parsed[:6])
                     elif hasattr(entry, 'updated_parsed') and entry.updated_parsed:
                         published_at = datetime(*entry.updated_parsed[:6])
+                        
+                    published_at = self.to_kst(published_at)
 
                     if title and url:
                         news_list.append({
@@ -93,6 +108,8 @@ class NewsScraper:
                     published_at = datetime.now()
                     if hasattr(entry, 'published_parsed') and entry.published_parsed:
                         published_at = datetime(*entry.published_parsed[:6])
+                        
+                    published_at = self.to_kst(published_at)
 
                     if title and url:
                         news_list.append({
@@ -137,6 +154,8 @@ class NewsScraper:
                     published_at = datetime.now()
                     if hasattr(entry, 'published_parsed') and entry.published_parsed:
                         published_at = datetime(*entry.published_parsed[:6])
+                        
+                    published_at = self.to_kst(published_at)
 
                     if title and url and len(title) > 10:
                         news_list.append({
@@ -154,6 +173,108 @@ class NewsScraper:
             print(f"CoinTelegraph RSS 크롤링 오류: {e}")
 
         return news_list
+    
+    def scrape_coinness(self, limit=10):
+        """
+        코인니스 RSS 피드에서 최신 뉴스를 가져옵니다.
+
+        Args:
+            limit (int): 가져올 뉴스 개수
+
+        Returns:
+            list: 뉴스 딕셔너리 리스트
+        """
+        news_list = []
+        try:
+            # coinness RSS 피드 URL
+            rss_url = "https://www.coinness.com/rss"
+
+            feed = feedparser.parse(rss_url)
+
+            for entry in feed.entries[:limit]:
+                try:
+                    title = entry.get('title', '').strip()
+                    url = entry.get('link', '')
+
+                    # 발행 시간 파싱
+                    published_at = datetime.now()
+                    if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                        published_at = datetime(*entry.published_parsed[:6])
+                    elif hasattr(entry, 'updated_parsed') and entry.updated_parsed:
+                        published_at = datetime(*entry.updated_parsed[:6])
+                    else:
+                        published_at = datetime.utcnow()
+                        
+                    published_at = self.to_kst(published_at)
+
+                    if title and url:
+                        news_list.append({
+                            'title': title,
+                            'url': url,
+                            'source': 'Coinness',
+                            'published_at': published_at
+                        })
+
+                except Exception as e:
+                    print(f"CoinDesk RSS 항목 파싱 오류: {e}")
+                    continue
+
+        except Exception as e:
+            print(f"Coinness RSS 크롤링 오류: {e}")
+
+        return news_list
+    
+    
+    def scrape_tokenpost(self, limit=10):
+        """
+        토큰포스트 RSS 피드에서 최신 뉴스를 가져옵니다.
+
+        Args:
+            limit (int): 가져올 뉴스 개수
+
+        Returns:
+            list: 뉴스 딕셔너리 리스트
+        """
+        news_list = []
+        try:
+            # tokenpost RSS 피드 URL
+            rss_url = "https://www.tokenpost.kr/rss"
+
+            feed = feedparser.parse(rss_url)
+
+            for entry in feed.entries[:limit]:
+                try:
+                    title = entry.get('title', '').strip()
+                    url = entry.get('link', '')
+
+                    # 발행 시간 파싱
+                    published_at = datetime.now()
+                    if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                        published_at = datetime(*entry.published_parsed[:6])
+                    elif hasattr(entry, 'updated_parsed') and entry.updated_parsed:
+                        published_at = datetime(*entry.updated_parsed[:6])
+                    else:
+                        published_at = datetime.utcnow()
+                        
+                    published_at = self.to_kst(published_at)
+
+                    if title and url:
+                        news_list.append({
+                            'title': title,
+                            'url': url,
+                            'source': 'TokenPost',
+                            'published_at': published_at
+                        })
+
+                except Exception as e:
+                    print(f"TokenPost RSS 항목 파싱 오류: {e}")
+                    continue
+
+        except Exception as e:
+            print(f"CoinDesk RSS 크롤링 오류: {e}")
+
+        return news_list
+    
 
     def scrape_all_sources(self, limit_per_source=10):
         """
@@ -166,6 +287,16 @@ class NewsScraper:
             list: 모든 뉴스 딕셔너리 리스트
         """
         all_news = []
+
+        print("📰 Coinness(한국) 크롤링 시작...")
+        Coinness_news = self.scrape_coinness(limit=limit_per_source)
+        all_news.extend(Coinness_news)
+        print(f"   ✓ Coinness: {len(Coinness_news)}개 수집")
+        
+        print("📰 TokenPost(한국) 크롤링 시작...")
+        TokenPost_news = self.scrape_tokenpost(limit=limit_per_source)
+        all_news.extend(TokenPost_news)
+        print(f"   ✓ TokenPost: {len(TokenPost_news)}개 수집")
 
         print("📰 CoinDesk 크롤링 시작...")
         coindesk_news = self.scrape_coindesk(limit=limit_per_source)
@@ -183,6 +314,7 @@ class NewsScraper:
         cointelegraph_news = self.scrape_cointelegraph(limit=limit_per_source)
         all_news.extend(cointelegraph_news)
         print(f"   ✓ CoinTelegraph: {len(cointelegraph_news)}개 수집")
+        
 
         # 중복 제거 (URL 기준)
         seen_urls = set()
