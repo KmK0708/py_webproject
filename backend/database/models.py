@@ -1,12 +1,22 @@
 """
 데이터베이스 모델 정의
 SQLAlchemy를 사용하여 코인 시세 데이터를 저장합니다.
+PostgreSQL과 SQLite 모두 지원합니다.
 """
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import os
+import sys
+
+# config.py 임포트를 위해 부모 디렉토리를 경로에 추가
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+try:
+    from config import Config
+except ImportError:
+    Config = None
 
 Base = declarative_base()
 
@@ -46,15 +56,44 @@ class News(Base):
 
 
 class Database:
-    """데이터베이스 연결 및 관리 클래스"""
+    """데이터베이스 연결 및 관리 클래스 (PostgreSQL & SQLite 지원)"""
 
-    def __init__(self, db_path='crypto_dashboard.db'):
+    def __init__(self, db_url=None):
         """
         Args:
-            db_path (str): SQLite 데이터베이스 파일 경로
+            db_url (str): 데이터베이스 URL
+                         - None이면 Config에서 자동으로 가져옴
+                         - SQLite: 'sqlite:///crypto_dashboard.db'
+                         - PostgreSQL: 'postgresql://user:pass@host:port/dbname'
         """
-        self.db_path = db_path
-        self.engine = create_engine(f'sqlite:///{db_path}', echo=False)
+        # db_url이 제공되지 않으면 Config에서 가져옴
+        if db_url is None:
+            if Config:
+                db_url = Config.DATABASE_URL
+            else:
+                db_url = 'sqlite:///crypto_dashboard.db'
+
+        # 하위 호환성: SQLite 파일명만 전달된 경우
+        if not db_url.startswith(('sqlite:', 'postgresql:', 'mysql:')):
+            db_url = f'sqlite:///{db_url}'
+
+        self.db_url = db_url
+
+        # PostgreSQL의 경우 pool 설정 추가
+        if db_url.startswith('postgresql'):
+            self.engine = create_engine(
+                db_url,
+                echo=False,
+                pool_pre_ping=True,  # 연결 상태 확인
+                pool_size=10,         # 연결 풀 크기
+                max_overflow=20       # 최대 추가 연결
+            )
+            print(f"[OK] PostgreSQL connected: {db_url.split('@')[1] if '@' in db_url else 'localhost'}")
+        else:
+            self.engine = create_engine(db_url, echo=False)
+            print(f"[OK] SQLite connected: {db_url}")
+
+        # 테이블 생성
         Base.metadata.create_all(self.engine)
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
