@@ -6,7 +6,8 @@ from flask_cors import CORS
 from collectors.binance_api import BinanceCollector
 from collectors.news_scraper import NewsScraper
 from database.models import Database
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta , timezone
+from config import Config
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
@@ -15,9 +16,10 @@ app = Flask(__name__)
 CORS(app)  # React와 통신을 위한 CORS 설정
 
 # 전역 변수
-db = Database('crypto_dashboard.db')
+db = Database(Config.DATABASE_URL)
 collector = BinanceCollector()
 news_scraper = NewsScraper()
+KST = timezone(timedelta(hours=9))
 
 # 캔들스틱 데이터 캐시 (메모리)
 # 구조: {f"{symbol}_{interval}": {"data": [...], "timestamp": datetime}}
@@ -253,6 +255,22 @@ def _cleanup_old_cache():
     if keys_to_delete:
         print(f"🗑️ 오래된 캐시 {len(keys_to_delete)}개 삭제")
 
+@app.route('/api/refresh_price/<symbol>')
+def refresh_price(symbol):
+    # 1) 바이낸스 API에서 최신 24시간 데이터 가져오기
+    data = collector.get_24h_ticker(symbol)
+
+    if not data:
+        return jsonify({"success": False, "error": "가격 데이터를 가져오지 못했습니다."}), 500
+
+    # 2) Supabase에 저장 (models.Database.add_coin_price)
+    saved = db.add_coin_price(data)
+
+    return jsonify({
+        "success": True,
+        "saved": saved,
+        "data": data
+    })
 
 @app.route('/api/news')
 def get_news():
@@ -372,7 +390,7 @@ def scrape_news():
             # 🔥 published_at이 None이면 현재시간으로 채움
             published_at = news.get('published_at')
             if not published_at:
-                published_at = datetime.now()
+                published_at = datetime.now(KST)
             news['published_at'] = published_at
 
             if db.add_news(news):
@@ -392,6 +410,40 @@ def scrape_news():
             'success': False,
             'error': str(e)
         }), 500
+        
+@app.route('/api/refresh_news')
+def refresh_news():
+    try:
+        # 1) 뉴스 전체 크롤링
+        news_list = news_scraper.scrape_all_sources(limit_per_source=10)
+
+        saved = 0
+        skipped = 0
+
+        # 2) Supabase에 저장
+        for news in news_list:
+            # 관련 코인 추출
+            related_coins = news_scraper.extract_coin_mentions(news['title'])
+            news['related_coins'] = ','.join(related_coins) if related_coins else None
+
+            # published_at이 없으면 현재시간 넣기
+            if not news.get('published_at'):
+                news['published_at'] = datetime.now()
+
+            if db.add_news(news):
+                saved += 1
+            else:
+                skipped += 1  # 이미 존재하는 뉴스
+
+        return jsonify({
+            "success": True,
+            "message": f"{saved}개 뉴스 저장 (중복 {skipped}개 제외)",
+            "total": len(news_list)
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 
 # ============================================

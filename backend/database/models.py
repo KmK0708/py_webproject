@@ -6,12 +6,14 @@ PostgreSQL과 SQLite 모두 지원합니다.
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from datetime import datetime
+from sqlalchemy.types import TIMESTAMP
+from datetime import datetime, timedelta, timezone
 import os
 import sys
 
 # config.py 임포트를 위해 부모 디렉토리를 경로에 추가
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+KST = timezone(timedelta(hours=9))
 
 try:
     from config import Config
@@ -33,7 +35,7 @@ class CoinPrice(Base):
     volume = Column(Float)
     price_change = Column(Float)
     price_change_percent = Column(Float)
-    timestamp = Column(DateTime, default=datetime.now, index=True)
+    timestamp = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(KST), index=True)
 
     def __repr__(self):
         return f"<CoinPrice(symbol={self.symbol}, price={self.current_price}, time={self.timestamp})>"
@@ -47,9 +49,9 @@ class News(Base):
     title = Column(String(500), nullable=False)
     url = Column(String(1000), unique=True, index=True)  # 중복 방지를 위한 unique 인덱스
     source = Column(String(100), index=True)
-    published_at = Column(DateTime, index=True)
+    published_at = Column(TIMESTAMP(timezone=True), index=True)
     related_coins = Column(String(200))  # 관련 코인 심볼 (쉼표로 구분)
-    timestamp = Column(DateTime, default=datetime.now, index=True)
+    timestamp = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(KST), index=True)
 
     def __repr__(self):
         return f"<News(title={self.title[:30]}..., source={self.source})>"
@@ -167,11 +169,16 @@ class Database:
             if existing:
                 return False  # 이미 존재하는 뉴스
 
+            pub = news_data.get('published_at')
+            
+            if pub and pub.tzinfo is None:
+                pub = pub.replace(tzinfo=KST)
+
             news_record = News(
                 title=news_data['title'],
                 url=news_data.get('url'),
                 source=news_data.get('source'),
-                published_at=news_data.get('published_at'),
+                published_at=pub,
                 related_coins=news_data.get('related_coins')
             )
             self.session.add(news_record)
