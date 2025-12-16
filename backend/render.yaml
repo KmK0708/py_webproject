@@ -1,0 +1,18 @@
+services:
+  # Backend API Service
+  - type: web
+    name: crypto-dashboard-api
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        sync: false  # Supabase에서 수동으로 설정
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_DEBUG
+        value: False
