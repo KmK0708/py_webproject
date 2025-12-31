@@ -11,6 +11,11 @@ class BinanceCollector:
 
     def __init__(self):
         self.base_url = "https://api.binance.com/api/v3"
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        self.session = requests.Session()
+        self.session.headers.update(self.headers)
 
     # ----------------------------
     # ✅ 모든 거래 가능 코인 목록 가져오기
@@ -27,7 +32,7 @@ class BinanceCollector:
         """
         try:
             url = f"{self.base_url}/exchangeInfo"
-            res = requests.get(url, timeout=10)
+            res = self.session.get(url, timeout=10)
             res.raise_for_status()
             data = res.json()
 
@@ -47,7 +52,7 @@ class BinanceCollector:
         try:
             url = f"{self.base_url}/ticker/price"
             params = {"symbol": symbol}
-            res = requests.get(url, params=params, timeout=10)
+            res = self.session.get(url, params=params, timeout=10)
             res.raise_for_status()
             data = res.json()
             return {
@@ -66,7 +71,7 @@ class BinanceCollector:
         try:
             url = f"{self.base_url}/ticker/24hr"
             params = {"symbol": symbol}
-            res = requests.get(url, params=params, timeout=10)
+            res = self.session.get(url, params=params, timeout=10)
             res.raise_for_status()
             data = res.json()
             return {
@@ -105,7 +110,7 @@ class BinanceCollector:
                 "interval": interval,
                 "limit": limit
             }
-            res = requests.get(url, params=params, timeout=10)
+            res = self.session.get(url, params=params, timeout=10)
             res.raise_for_status()
             data = res.json()
 
@@ -136,7 +141,7 @@ class BinanceCollector:
         """
         try:
             url = f"{self.base_url}/ticker/24hr"
-            res = requests.get(url, timeout=10)
+            res = self.session.get(url, timeout=10)
             res.raise_for_status()
             data = res.json()
 
