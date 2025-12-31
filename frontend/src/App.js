@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import "bootstrap/dist/css/bootstrap.min.css";
 import './App.css';
+import { API_URL } from './config';
 
 // 컴포넌트 불러오기
 import Navbar from './Components/Navbar';
@@ -31,7 +32,7 @@ function App() {
   // -----------------------------
   const loadPrices = useCallback((pageNum = 1) => {
     setLoading(true);
-    fetch(`http://localhost:5000/api/current-prices?page=${pageNum}&limit=${limit}`)
+    fetch(`${API_URL}/api/current-prices?page=${pageNum}&limit=${limit}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -70,7 +71,7 @@ function App() {
   // 공포·탐욕 지수 데이터
   // -----------------------------
   useEffect(() => {
-    fetch('http://localhost:5000/api/fear-greed')
+    fetch(`${API_URL}/api/fear-greed`)
       .then(res => res.json())
       .then(json => setFearGreedData(json.success ? json.data : []))
       .catch(err => console.error('지수 API 오류:', err));

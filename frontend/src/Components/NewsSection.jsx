@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/NewsSection.css';
+import { API_URL } from '../config';
 
 const NewsSection = () => {
   const [news, setNews] = useState([]);
@@ -16,7 +17,7 @@ const NewsSection = () => {
     try {
       const sourceParam = selectedSource !== 'all' ? `&source=${selectedSource}` : '';
       const response = await fetch(
-        `http://localhost:5000/api/news?limit=${limit}${sourceParam}`
+        `${API_URL}/api/news?limit=${limit}${sourceParam}`
       );
       const data = await response.json();
 
@@ -37,7 +38,7 @@ const NewsSection = () => {
   const scrapeNews = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/scrape-news?limit=10');
+      const response = await fetch(`${API_URL}/api/scrape-news?limit=10`);
       const data = await response.json();
 
       if (data.success) {

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart } from 'lightweight-charts';
 import '../styles/CoinChartModal.css';
+import { API_URL } from '../config';
 
 // 차트 데이터 캐시
 const chartDataCache = {};
@@ -193,7 +194,7 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
 
         // 서버에서 캔들 데이터 요청
         const res = await fetch(
-          `http://localhost:5000/api/klines/${symbol}?interval=${timeframe}&limit=120`,
+          `${API_URL}/api/klines/${symbol}?interval=${timeframe}&limit=120`,
           { signal: abortControllerRef.current.signal }
         );
         const data = await res.json();
@@ -201,7 +202,7 @@ const CoinChartModal = ({ symbol, onClose, autoRefresh }) => {
         if (!data.success) throw new Error(data.error || 'Failed to load chart data');
 
         // 현재 코인 가격 정보도 요청
-        const priceRes = await fetch(`http://localhost:5000/api/current-prices?page=1&limit=1000`);
+        const priceRes = await fetch(`${API_URL}/api/current-prices?page=1&limit=1000`);
         const priceData = await priceRes.json();
         const coin = priceData.data.find(c => c.symbol === symbol);
         setCoinData(coin);
