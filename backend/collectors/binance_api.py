@@ -1,6 +1,7 @@
 """
 Binance API를 통해 코인 시세 데이터를 수집하는 모듈
 """
+import os
 import requests
 import time
 from datetime import datetime
@@ -10,12 +11,48 @@ class BinanceCollector:
     """Binance API에서 코인 데이터를 수집하는 클래스"""
 
     def __init__(self):
-        self.base_url = "https://api.binance.com/api/v3"
+        env_urls = os.getenv("BINANCE_BASE_URLS")
+        default_urls = [
+            "https://api.binance.com/api/v3",
+            "https://data-api.binance.vision/api/v3",
+            "https://api1.binance.com/api/v3"
+        ]
+        if env_urls:
+            base_urls = [u.strip().rstrip("/") for u in env_urls.split(",") if u.strip()]
+        else:
+            base_urls = default_urls
+
+        self.base_urls = base_urls
+        self.base_url = self.base_urls[0]
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         self.session = requests.Session()
         self.session.headers.update(self.headers)
+
+    def _request(self, path, params=None):
+        """Binance API request with base URL fallback."""
+        last_exc = None
+        for base_url in self.base_urls:
+            url = f"{base_url}{path}"
+            try:
+                res = self.session.get(url, params=params, timeout=10)
+                if res.status_code == 451:
+                    raise requests.exceptions.HTTPError(
+                        "451 Client Error: Unavailable For Legal Reasons",
+                        response=res
+                    )
+                res.raise_for_status()
+                self.base_url = base_url
+                return res
+            except requests.exceptions.RequestException as e:
+                last_exc = e
+                continue
+
+        if last_exc:
+            raise last_exc
+
+        raise requests.exceptions.RequestException("Binance API ?? ??")
 
     # ----------------------------
     # ✅ 모든 거래 가능 코인 목록 가져오기
@@ -31,9 +68,7 @@ class BinanceCollector:
             list: ["BTCUSDT", "ETHUSDT", ...]
         """
         try:
-            url = f"{self.base_url}/exchangeInfo"
-            res = self.session.get(url, timeout=10)
-            res.raise_for_status()
+            res = self._request("/exchangeInfo")
             data = res.json()
 
             symbols = [
@@ -50,10 +85,8 @@ class BinanceCollector:
     # ----------------------------
     def get_current_price(self, symbol="BTCUSDT"):
         try:
-            url = f"{self.base_url}/ticker/price"
             params = {"symbol": symbol}
-            res = self.session.get(url, params=params, timeout=10)
-            res.raise_for_status()
+            res = self._request("/ticker/price", params=params)
             data = res.json()
             return {
                 "symbol": data["symbol"],
@@ -69,10 +102,8 @@ class BinanceCollector:
     # ----------------------------
     def get_24h_ticker(self, symbol="BTCUSDT"):
         try:
-            url = f"{self.base_url}/ticker/24hr"
             params = {"symbol": symbol}
-            res = self.session.get(url, params=params, timeout=10)
-            res.raise_for_status()
+            res = self._request("/ticker/24hr", params=params)
             data = res.json()
             return {
                 "symbol": data["symbol"],
@@ -104,14 +135,12 @@ class BinanceCollector:
             list: 캔들스틱 데이터 리스트
         """
         try:
-            url = f"{self.base_url}/klines"
             params = {
                 "symbol": symbol,
                 "interval": interval,
                 "limit": limit
             }
-            res = self.session.get(url, params=params, timeout=10)
-            res.raise_for_status()
+            res = self._request("/klines", params=params)
             data = res.json()
 
             # 캔들스틱 데이터 포맷팅
@@ -140,9 +169,7 @@ class BinanceCollector:
         symbols가 없으면 모든 USDT 코인을 자동으로 가져옴.
         """
         try:
-            url = f"{self.base_url}/ticker/24hr"
-            res = self.session.get(url, timeout=10)
-            res.raise_for_status()
+            res = self._request("/ticker/24hr")
             data = res.json()
 
             if symbols is None:
