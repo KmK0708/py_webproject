@@ -541,5 +541,8 @@ if __name__ == '__main__':
     print("  ✓ 가격 자동 저장: 10분마다")
     print("=" * 60)
 
-    # Flask 서버 실행
-    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)
+    # Flask 서버 실행 (개발용)
+    # 프로덕션에서는 gunicorn이 자동으로 app 객체를 실행합니다
+    import os
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port, use_reloader=False)
